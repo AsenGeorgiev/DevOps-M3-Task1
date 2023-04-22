@@ -1,0 +1,52 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure(2) do |config|
+    
+  config.ssh.insert_key = false
+
+  config.vm.define "web" do |web|
+    web.vm.box="shekeriev/debian-11"
+    web.vm.hostname = "web"
+    web.vm.network "private_network", ip: "192.168.99.100"
+    web.vm.network "forwarded_port", guest: 80, host: 8000
+    web.vm.provider "virtualbox" do |v|
+      v.gui = false
+      v.memory = 2048
+      v.cpus = 1
+    end
+    web.vm.provision "shell", inline: <<EOS
+    echo "192.168.99.99 salt" >> /etc/hosts
+    echo "* installing packges ..."
+    apt-get update
+    apt-get install -y git nano salt-minion python3 python3-pip python3-distro ca-certificates curl gnupg
+    sudo echo"master:salt" >> /etc/salt/minion
+    sudo systemctl restart salt-minion
+    sudo systemctl enable salt-minion
+
+EOS
+  end
+
+  config.vm.define "salt" do |salt|
+    salt.vm.box = "shekeriev/debian-11"
+    salt.vm.hostname = "salt"
+    salt.vm.network "private_network", ip: "192.168.99.99"
+    salt.vm.provider "virtualbox" do |v|
+      v.gui = false
+      v.memory = 2048
+      v.cpus = 1
+    end
+    salt.vm.provision "shell", inline: <<EOS
+    echo "* Add hosts ..."
+    echo "192.168.99.100 web" >> /etc/hosts
+    echo "* installing packges ..."
+    apt-get update
+    apt-get install -y git nano python3 python3-pip python3-distro salt-master 
+    sudo systemctl enable salt-master
+    sudo systemctl restart salt-master
+    sudo salt-key -A -y
+    sudo salt web pkg.install nginx
+
+EOS
+  end
+end
