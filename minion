@@ -1,5 +1,0 @@
-master: 192.168.99.100
-id: web
-grains:
-  roles:
-    - docker
