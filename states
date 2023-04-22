@@ -1,0 +1,7 @@
+install_nginx:
+  pkg.installed:
+    - name: nginx
+run_nginx:
+  cmd.run:
+    - name: docker run -d -p 80:80 nginx:latest
+    - unless: docker ps | grep -q nginx
